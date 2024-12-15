@@ -2,6 +2,9 @@
 pragma solidity 0.8.28;
 
 interface IEscrow {
-    function withdraw() external;
-    function refund(address _creator) external;
+    error ValueIsTooLow();
+    error TransferFailed();
+
+    function withdraw(address _creator) external;
+    function refund(address _payer) external;
 }

@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-error ValueIsTooLow();
-error TransferFailed();
-
 import { IEscrow } from "./interface/IEscrow.sol";
 
 contract Escrow is IEscrow {
@@ -19,18 +16,18 @@ contract Escrow is IEscrow {
         creator = _creator;
     }
 
-    function withdraw() external {
-        // is it eligible for withdrawal
-        if (msg.sender != creator) revert();
-        (bool success,) = payable(msg.sender).call{ value: address(this).balance }("");
+    // Event? the single fn
+
+    function withdraw(address _creator) external {
+        // Restriction!
+        (bool success,) = payable(_creator).call{ value: address(this).balance }("");
         if (!success) revert TransferFailed();
-        // Only the creator
-        // Only when the conditions are met
     }
 
-    function refund(address _creator) external {
+    function refund(address _payer) external {
+        // Restriction!
         // Only the payment processor contract is allowed to call
-        (bool success,) = payable(_creator).call{ value: address(this).balance }("");
+        (bool success,) = payable(_payer).call{ value: address(this).balance }("");
         if (!success) revert TransferFailed();
     }
 }
