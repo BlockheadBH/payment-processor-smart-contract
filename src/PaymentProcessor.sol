@@ -2,65 +2,64 @@
 pragma solidity 0.8.28;
 
 import { Ownable } from "solady/auth/Ownable.sol";
-import { CREATE3 } from "solady/utils/CREATE3.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
-import { IEscrow, Escrow } from "./Escrow.sol";
-import { IPaymentProcessor } from "./interface/IPaymentProcessor.sol";
+import { IEscrow, EscrowFactory } from "./EscrowFactory.sol";
+import { Invoice, IPaymentProcessor } from "./interface/IPaymentProcessor.sol";
+import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "./utils/Constants.sol";
+import {
+    InvoiceNotPaid,
+    ExcessivePayment,
+    InvoiceAlreadyPaid,
+    InvoiceDoesNotExist,
+    InvalidInvoiceState,
+    InvoicePriceIsTooLow,
+    InvoiceIsNoLongerValid,
+    HoldPeriodHasNotBeenExceeded,
+    HoldPeriodShouldBeGreaterThanDefault
+} from "./utils/Errors.sol";
 
-// Create3 -> another file
-
-contract PaymentProcessor is Ownable, IPaymentProcessor {
+contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
     using SafeCastLib for uint256;
 
-    uint256 public fee;
-    address public feeReceiver;
-    uint256 public invoiceId;
-    uint256 public defaultHoldPeriod;
-
-    uint8 public constant CREATED = 1;
-    uint8 public constant ACCEPTED = CREATED + 1;
-    uint8 public constant PAID = ACCEPTED + 1;
-    uint8 public constant REJECTED = PAID + 1;
-    uint8 public constant CANCELLED = REJECTED + 1;
-
-    uint256 public constant VALID_PERIOD = 180 days;
+    uint256 private fee;
+    address private feeReceiver;
+    uint256 private currentInvoiceId;
+    uint256 private defaultHoldPeriod;
 
     mapping(uint256 invoiceId => Invoice invoice) private invoiceData;
 
-    constructor() {
-        invoiceId = 1;
+    constructor(address _receiversAddress, uint256 _fee, uint256 _defaultHoldPeriod) {
+        currentInvoiceId = 1;
         _initializeOwner(msg.sender);
+        setFee(_fee);
+        setDefaultHoldPeriod(_defaultHoldPeriod);
+        setFeeReceiversAddress(_receiversAddress);
     }
 
     function createInvoice(uint256 _invoicePrice) external returns (uint256) {
         if (_invoicePrice <= fee) revert InvoicePriceIsTooLow();
-        uint256 thisInvoiceId = invoiceId;
+        uint256 thisInvoiceId = currentInvoiceId;
         Invoice memory invoice = invoiceData[thisInvoiceId];
         invoice.creator = msg.sender;
         invoice.creationTime = (block.timestamp).toUint32();
         invoice.price = _invoicePrice;
         invoice.status = CREATED;
         invoiceData[thisInvoiceId] = invoice;
-        emit InvoiceCreated(msg.sender, invoiceId, block.timestamp);
-        invoiceId++;
+        emit InvoiceCreated(msg.sender, thisInvoiceId, block.timestamp);
+        currentInvoiceId++;
         return thisInvoiceId;
     }
 
     function makeInvoicePayment(uint256 _invoiceId) external payable returns (address) {
         Invoice memory invoice = invoiceData[_invoiceId];
         uint256 bhFee = fee;
+
         if (msg.value > invoice.price) revert ExcessivePayment();
         if (invoice.status != CREATED) revert InvalidInvoiceState();
         if (block.timestamp > invoice.creationTime + VALID_PERIOD) revert InvoiceIsNoLongerValid();
-        uint256 invoicePaymentValue = msg.value - bhFee;
 
-        bytes memory constructorArg = abi.encode(invoice.creator, msg.sender, bhFee);
-        bytes32 salt = computeSalt(invoice.creator, msg.sender, _invoiceId);
-
-        address escrow = CREATE3.deployDeterministic(
-            invoicePaymentValue, abi.encodePacked(type(Escrow).creationCode, constructorArg), salt
-        );
+        address escrow = _create(invoice.creator, _invoiceId, bhFee, msg.value - bhFee);
 
         invoice.escrow = escrow;
         invoice.payer = msg.sender;
@@ -94,20 +93,8 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
         if (block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
             revert HoldPeriodHasNotBeenExceeded();
         }
-        IEscrow(invoice.escrow).withdraw(msg.sender);
+        IEscrow(invoice.escrow).withdrawToCreator(msg.sender);
         emit InvoiceReleased(_invoiceId);
-    }
-
-    function computeSalt(address _creator, address _payer, uint256 _invoiceId)
-        public
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encode(_creator, _payer, _invoiceId));
-    }
-
-    function getAddress(bytes32 _salt) external view returns (address) {
-        return CREATE3.predictDeterministicAddress(_salt);
     }
 
     function _acceptInvoice(uint256 _invoiceId, address _payer) internal {
@@ -117,30 +104,44 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
 
     function _rejectInvoice(uint256 _invoiceId, Invoice memory invoice) internal {
         invoiceData[_invoiceId].status = REJECTED;
-        IEscrow(invoice.escrow).refund(invoice.payer);
+        IEscrow(invoice.escrow).refundToPayer(invoice.payer);
         emit InvoiceRejected(msg.sender, invoice.payer, _invoiceId);
     }
 
     function setHoldPeriod(uint256 _invoiceId, uint32 _holdPeriod) external onlyOwner {
         Invoice memory invoice = invoiceData[_invoiceId];
+
         if (invoice.status < CREATED) revert InvoiceDoesNotExist();
         if (_holdPeriod < invoice.holdPeriod) revert HoldPeriodShouldBeGreaterThanDefault();
         invoiceData[_invoiceId].holdPeriod = _holdPeriod;
     }
 
-    // constructor for default
-    function setFeeReceiversAddress(address _newFeeReceiver) external onlyOwner {
+    function setFeeReceiversAddress(address _newFeeReceiver) public onlyOwner {
         feeReceiver = _newFeeReceiver;
     }
 
-    // constructor for default
-    function setDefaultHoldPeriod(uint256 _newDefaultHoldPeriod) external onlyOwner {
+    function setDefaultHoldPeriod(uint256 _newDefaultHoldPeriod) public onlyOwner {
         defaultHoldPeriod = _newDefaultHoldPeriod;
     }
 
-    // constructor for default
-    function setFee(uint256 _newFee) external onlyOwner {
+    function setFee(uint256 _newFee) public onlyOwner {
         fee = _newFee;
+    }
+
+    function getFee() external view returns (uint256) {
+        return fee;
+    }
+
+    function getFeeReceiver() external view returns (address) {
+        return feeReceiver;
+    }
+
+    function getCurrentInvoiceId() external view returns (uint256) {
+        return currentInvoiceId;
+    }
+
+    function getDefaultHoldPeriod() external view returns (uint256) {
+        return defaultHoldPeriod;
     }
 
     function getInvoiceData(uint256 _invoiceId) external view returns (Invoice memory) {

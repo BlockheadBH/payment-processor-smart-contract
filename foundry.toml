@@ -6,7 +6,7 @@ libs = ["lib"]
 remappings = ["solady/=lib/solady/src/"]
 
 [fmt]
-line_length = 100
+line_length = 120
 bracket_spacing = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
