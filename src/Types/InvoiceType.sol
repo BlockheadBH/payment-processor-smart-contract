@@ -11,7 +11,7 @@ struct Invoice {
     address escrow;
     /// @notice The total price of the invoice in wei.
     uint256 price;
-    /// @notice The amount that has been paid so far in wei.
+    /// @notice The amount that has been paid.
     uint256 amountPayed;
     /// @notice The Unix timestamp when the invoice was created.
     uint32 creationTime;

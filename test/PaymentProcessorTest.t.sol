@@ -7,13 +7,18 @@ import { PaymentProcessor } from "../src/PaymentProcessor.sol";
 import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "../src/utils/Constants.sol";
 import {
     Unauthorized,
+    ValueIsTooLow,
     InvoiceNotPaid,
     ExcessivePayment,
     InvoiceAlreadyPaid,
     InvoiceDoesNotExist,
     InvalidInvoiceState,
+    FeeValueCanNotBeZero,
     InvoicePriceIsTooLow,
+    HoldPeriodCanNotBeZero,
     InvoiceIsNoLongerValid,
+    ZeroAddressIsNotAllowed,
+    CreatorCannotPayOwnInvoice,
     HoldPeriodHasNotBeenExceeded,
     HoldPeriodShouldBeGreaterThanDefault
 } from "../src/utils/Errors.sol";
@@ -45,12 +50,8 @@ contract PaymentProcessorTest is Test {
         vm.deal(payerOne, PAYER_ONE_INITIAL_BALANCE);
         vm.deal(payerTwo, PAYER_TWO_INITIAL_BALANCE);
 
-        vm.startPrank(owner);
+        vm.prank(owner);
         pp = new PaymentProcessor(feeReceiver, FEE, DEFAULT_HOLD_PERIOD);
-        console.log("{THIS}:", address(pp));
-        console.log("{THIS}:", creatorOne);
-        console.log("{THIS}:", payerOne);
-
         vm.stopPrank();
     }
 
@@ -59,6 +60,20 @@ contract PaymentProcessorTest is Test {
         assertEq(pp.getFeeReceiver(), feeReceiver);
         assertEq(pp.getCurrentInvoiceId(), 1);
         assertEq(pp.getDefaultHoldPeriod(), DEFAULT_HOLD_PERIOD);
+    }
+
+    function test_setters() public {
+        vm.startPrank(owner);
+
+        vm.expectRevert(FeeValueCanNotBeZero.selector);
+        pp.setFee(0);
+
+        vm.expectRevert(HoldPeriodCanNotBeZero.selector);
+        pp.setDefaultHoldPeriod(0);
+
+        vm.expectRevert(ZeroAddressIsNotAllowed.selector);
+        pp.setFeeReceiversAddress(address(0));
+        vm.stopPrank();
     }
 
     function test_invoice_creation() public {
@@ -81,9 +96,8 @@ contract PaymentProcessorTest is Test {
         assertEq(invoiceDataOne.escrow, address(0));
         assertEq(pp.getCurrentInvoiceId(), 2);
 
-        vm.startPrank(creatorTwo);
+        vm.prank(creatorTwo);
         pp.createInvoice(25 ether);
-        vm.stopPrank();
 
         Invoice memory invoiceDataTwo = pp.getInvoiceData(2);
         assertEq(invoiceDataTwo.creator, creatorTwo);
@@ -122,11 +136,21 @@ contract PaymentProcessorTest is Test {
     function test_make_invoice_payment() public {
         // CREATE INVOICE
         uint256 invoicePrice = 100 ether;
-        vm.prank(creatorOne);
+        deal(creatorOne, 1);
+        vm.startPrank(creatorOne);
         uint256 invoiceId = pp.createInvoice(invoicePrice);
 
-        // TRY EXCESSIVE PAYMENT
+        vm.expectRevert(CreatorCannotPayOwnInvoice.selector);
+        pp.makeInvoicePayment{ value: 1 }(invoiceId);
+        vm.stopPrank();
+
         vm.startPrank(payerOne);
+        // TRY VERY LOW PAYMENT
+        vm.expectRevert(ValueIsTooLow.selector);
+        pp.makeInvoicePayment{ value: FEE }(invoiceId);
+
+        // TRY EXCESSIVE PAYMENT
+
         vm.expectRevert(ExcessivePayment.selector);
         pp.makeInvoicePayment{ value: invoicePrice + 1 }(invoiceId);
 
@@ -232,7 +256,7 @@ contract PaymentProcessorTest is Test {
 
         vm.prank(owner);
         vm.expectRevert(InvoiceDoesNotExist.selector);
-        pp.setHoldPeriod(1, adminHoldPeriod);
+        pp.setInvoiceHoldPeriod(1, adminHoldPeriod);
 
         // CREATE
         uint256 invoicePrice = 100 ether;
@@ -249,8 +273,8 @@ contract PaymentProcessorTest is Test {
 
         vm.startPrank(owner);
         vm.expectRevert(HoldPeriodShouldBeGreaterThanDefault.selector);
-        pp.setHoldPeriod(invoiceId, 5 minutes);
-        pp.setHoldPeriod(invoiceId, uint32(adminHoldPeriod + block.timestamp));
+        pp.setInvoiceHoldPeriod(invoiceId, 5 minutes);
+        pp.setInvoiceHoldPeriod(invoiceId, uint32(adminHoldPeriod + block.timestamp));
         vm.stopPrank();
 
         vm.warp(block.timestamp + adminHoldPeriod + 1);
@@ -258,5 +282,31 @@ contract PaymentProcessorTest is Test {
         pp.releaseInvoice(invoiceId);
 
         assertEq(creatorOne.balance, invoicePrice - FEE);
+    }
+
+    function test_Ether_Withdrawal() public {
+        // CREATE INVOICE
+        uint256 invoicePrice = 100 ether;
+        vm.prank(creatorOne);
+        uint256 invoiceIdOne = pp.createInvoice(invoicePrice);
+
+        pp.makeInvoicePayment{ value: invoicePrice }(invoiceIdOne);
+
+        vm.expectRevert(Unauthorized.selector);
+        pp.withdrawFees();
+
+        vm.prank(feeReceiver);
+        pp.withdrawFees();
+        assertEq(address(feeReceiver).balance, FEE);
+
+        vm.prank(creatorTwo);
+        uint256 invoiceIdTwo = pp.createInvoice(invoicePrice);
+
+        pp.makeInvoicePayment{ value: invoicePrice }(invoiceIdTwo);
+
+        uint256 receiversBalanceBefore = address(feeReceiver).balance;
+        vm.prank(owner);
+        pp.withdrawFees();
+        assertEq(address(feeReceiver).balance, FEE + receiversBalanceBefore);
     }
 }

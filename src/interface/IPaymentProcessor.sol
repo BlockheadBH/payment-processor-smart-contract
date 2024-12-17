@@ -48,7 +48,7 @@ interface IPaymentProcessor {
      * @param _invoiceId The ID of the invoice.
      * @param _holdPeriod The new hold period in seconds.
      */
-    function setHoldPeriod(uint256 _invoiceId, uint32 _holdPeriod) external;
+    function setInvoiceHoldPeriod(uint256 _invoiceId, uint32 _holdPeriod) external;
 
     /**
      * @notice Updates the address of the fee receiver.

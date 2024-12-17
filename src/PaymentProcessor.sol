@@ -8,14 +8,19 @@ import { IEscrow, EscrowFactory } from "./EscrowFactory.sol";
 import { Invoice, IPaymentProcessor } from "./interface/IPaymentProcessor.sol";
 import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "./utils/Constants.sol";
 import {
+    ValueIsTooLow,
     TransferFailed,
     InvoiceNotPaid,
     ExcessivePayment,
     InvoiceAlreadyPaid,
     InvoiceDoesNotExist,
     InvalidInvoiceState,
+    FeeValueCanNotBeZero,
     InvoicePriceIsTooLow,
+    HoldPeriodCanNotBeZero,
     InvoiceIsNoLongerValid,
+    ZeroAddressIsNotAllowed,
+    CreatorCannotPayOwnInvoice,
     HoldPeriodHasNotBeenExceeded,
     HoldPeriodShouldBeGreaterThanDefault
 } from "./utils/Errors.sol";
@@ -47,7 +52,9 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
 
     /// inheritdoc IPaymentProcessor
     function createInvoice(uint256 _invoicePrice) external returns (uint256) {
-        if (_invoicePrice <= fee) revert InvoicePriceIsTooLow();
+        if (_invoicePrice <= fee) {
+            revert InvoicePriceIsTooLow();
+        }
         uint256 thisInvoiceId = currentInvoiceId;
         Invoice memory invoice = invoiceData[thisInvoiceId];
         invoice.creator = msg.sender;
@@ -65,11 +72,23 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
         Invoice memory invoice = invoiceData[_invoiceId];
         uint256 bhFee = fee;
 
-        if (msg.value > invoice.price) revert ExcessivePayment();
-        if (invoice.status != CREATED) revert InvalidInvoiceState();
-        if (block.timestamp > invoice.creationTime + VALID_PERIOD) revert InvoiceIsNoLongerValid();
+        if (invoice.creator == msg.sender) revert CreatorCannotPayOwnInvoice();
 
-        address escrow = _create(invoice.creator, _invoiceId, bhFee, msg.value - bhFee);
+        if (msg.value > invoice.price) {
+            revert ExcessivePayment();
+        }
+        if (invoice.status != CREATED) {
+            revert InvalidInvoiceState();
+        }
+        if (block.timestamp > invoice.creationTime + VALID_PERIOD) {
+            revert InvoiceIsNoLongerValid();
+        }
+
+        if (msg.value <= bhFee) {
+            revert ValueIsTooLow();
+        }
+
+        address escrow = _create(invoice.creator, _invoiceId, msg.value - bhFee);
 
         invoice.escrow = escrow;
         invoice.payer = msg.sender;
@@ -85,16 +104,24 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
     /// inheritdoc IPaymentProcessor
     function creatorsAction(uint256 _invoiceId, bool _state) external {
         Invoice memory invoice = invoiceData[_invoiceId];
-        if (invoice.creator != msg.sender) revert Unauthorized();
-        if (invoice.status != PAID) revert InvoiceNotPaid();
+        if (invoice.creator != msg.sender) {
+            revert Unauthorized();
+        }
+        if (invoice.status != PAID) {
+            revert InvoiceNotPaid();
+        }
         _state ? _acceptInvoice(_invoiceId, invoice.payer) : _rejectInvoice(_invoiceId, invoice);
     }
 
     /// inheritdoc IPaymentProcessor
     function cancelInvoice(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
-        if (invoice.creator != msg.sender) revert Unauthorized();
-        if (invoice.status == PAID) revert InvoiceAlreadyPaid();
+        if (invoice.creator != msg.sender) {
+            revert Unauthorized();
+        }
+        if (invoice.status == PAID) {
+            revert InvoiceAlreadyPaid();
+        }
         invoiceData[_invoiceId].status = CANCELLED;
         emit InvoiceCanceled(_invoiceId);
     }
@@ -102,7 +129,9 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
     /// inheritdoc IPaymentProcessor
     function releaseInvoice(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
-        if (invoice.creator != msg.sender) revert Unauthorized();
+        if (invoice.creator != msg.sender) {
+            revert Unauthorized();
+        }
         if (block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
             revert HoldPeriodHasNotBeenExceeded();
         }
@@ -136,39 +165,45 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
     }
 
     /// inheritdoc IPaymentProcessor
-    function setHoldPeriod(uint256 _invoiceId, uint32 _holdPeriod) external onlyOwner {
+    function setInvoiceHoldPeriod(uint256 _invoiceId, uint32 _holdPeriod) external onlyOwner {
         Invoice memory invoice = invoiceData[_invoiceId];
 
-        if (invoice.status < CREATED) revert InvoiceDoesNotExist();
-        if (_holdPeriod < invoice.holdPeriod) revert HoldPeriodShouldBeGreaterThanDefault();
+        if (invoice.status < CREATED) {
+            revert InvoiceDoesNotExist();
+        }
+        if (_holdPeriod < invoice.holdPeriod) {
+            revert HoldPeriodShouldBeGreaterThanDefault();
+        }
         invoiceData[_invoiceId].holdPeriod = _holdPeriod;
     }
 
     /// inheritdoc IPaymentProcessor
     function withdrawFees() external {
-        if (owner() != msg.sender || msg.sender != feeReceiver) revert Unauthorized();
+        if (owner() != msg.sender && msg.sender != feeReceiver) {
+            revert Unauthorized();
+        }
         uint256 balance = address(this).balance;
         (bool success,) = payable(feeReceiver).call{ value: balance }("");
-        if (!success) revert TransferFailed();
-    }
-
-    /// inheritdoc IPaymentProcessor
-    function getContractBalance() external view returns (uint256) {
-        return address(this).balance;
+        if (!success) {
+            revert TransferFailed();
+        }
     }
 
     /// inheritdoc IPaymentProcessor
     function setFeeReceiversAddress(address _newFeeReceiver) public onlyOwner {
+        if (_newFeeReceiver == address(0)) revert ZeroAddressIsNotAllowed();
         feeReceiver = _newFeeReceiver;
     }
 
     /// inheritdoc IPaymentProcessor
     function setDefaultHoldPeriod(uint256 _newDefaultHoldPeriod) public onlyOwner {
+        if (_newDefaultHoldPeriod == 0) revert HoldPeriodCanNotBeZero();
         defaultHoldPeriod = _newDefaultHoldPeriod;
     }
 
     /// inheritdoc IPaymentProcessor
     function setFee(uint256 _newFee) public onlyOwner {
+        if (_newFee == 0) revert FeeValueCanNotBeZero();
         fee = _newFee;
     }
 

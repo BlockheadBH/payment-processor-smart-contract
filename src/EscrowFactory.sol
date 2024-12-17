@@ -23,15 +23,11 @@ abstract contract EscrowFactory is IEscrowFactory {
      *      The function uses `CREATE3.deployDeterministic` to ensure that the contract is deployed at a fixed address
      * @param _creator The address of the creator of the escrow.
      * @param _invoiceId The unique ID of the invoice associated with this escrow.
-     * @param _fee The fee associated with this escrow.
      * @param _invoicePaymentValue The value of the payment associated with the escrow.
      * @return The address of the newly deployed `Escrow` contract.
      */
-    function _create(address _creator, uint256 _invoiceId, uint256 _fee, uint256 _invoicePaymentValue)
-        internal
-        returns (address)
-    {
-        bytes memory constructorArg = abi.encode(_creator, msg.sender, _fee, _invoiceId, address(this));
+    function _create(address _creator, uint256 _invoiceId, uint256 _invoicePaymentValue) internal returns (address) {
+        bytes memory constructorArg = abi.encode(_invoiceId, _creator, msg.sender, address(this));
         bytes32 salt = computeSalt(_creator, msg.sender, _invoiceId);
 
         address escrow = CREATE3.deployDeterministic(

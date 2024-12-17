@@ -16,6 +16,15 @@ error InvoiceNotPaid();
 /// @notice Thrown when the payment amount exceeds the required invoice amount.
 error ExcessivePayment();
 
+/// @notice Thrown when the fee value provided is zero.
+error FeeValueCanNotBeZero();
+
+/// @notice Thrown when the hold period provided is zero, which is invalid.
+error HoldPeriodCanNotBeZero();
+
+/// @notice Thrown when a zero address (`address(0)`) is provided.
+error ZeroAddressIsNotAllowed();
+
 /// @notice Thrown when the invoice price is below the allowed minimum.
 error InvoicePriceIsTooLow();
 
@@ -30,6 +39,9 @@ error InvoiceAlreadyPaid();
 
 /// @notice Thrown when an action is attempted on a non-existent invoice.
 error InvoiceDoesNotExist();
+
+/// @notice Thrown when the creator of an invoice attempts to pay for their own invoice.
+error CreatorCannotPayOwnInvoice();
 
 /// @notice Thrown when the hold period for an invoice has not yet been exceeded.
 error HoldPeriodHasNotBeenExceeded();
