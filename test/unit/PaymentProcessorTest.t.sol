@@ -4,7 +4,16 @@ pragma solidity 0.8.28;
 import { Test, console } from "forge-std/Test.sol";
 import { Invoice } from "../../src/Types/InvoiceType.sol";
 import { PaymentProcessor } from "../../src/PaymentProcessor.sol";
-import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "../../src/utils/Constants.sol";
+import {
+    CREATED,
+    ACCEPTED,
+    REJECTED,
+    PAID,
+    CANCELLED,
+    REFUNDED,
+    ACCEPTANCE_WINDOW,
+    VALID_PERIOD
+} from "../../src/utils/Constants.sol";
 import {
     Unauthorized,
     ValueIsTooLow,
@@ -18,7 +27,9 @@ import {
     HoldPeriodCanNotBeZero,
     InvoiceIsNoLongerValid,
     ZeroAddressIsNotAllowed,
+    AcceptanceWindowExceeded,
     CreatorCannotPayOwnInvoice,
+    InvoiceNotEligibleForRefund,
     HoldPeriodHasNotBeenExceeded,
     HoldPeriodShouldBeGreaterThanDefault
 } from "../../src/utils/Errors.sol";
@@ -174,6 +185,7 @@ contract PaymentProcessorTest is Test {
 
         Invoice memory invoiceData = pp.getInvoiceData(invoiceId);
 
+        assertEq(payerOne.balance, PAYER_ONE_INITIAL_BALANCE - invoicePrice);
         assertEq(escrowAddress.balance, invoicePrice - FEE);
         assertEq(address(pp).balance, FEE);
         assertEq(escrowAddress.balance + address(pp).balance, invoicePrice);
@@ -205,6 +217,47 @@ contract PaymentProcessorTest is Test {
         assertEq(pp.getInvoiceData(invoiceId).status, ACCEPTED);
     }
 
+    function test_payment_acceptance_after_acceptance_window() public {
+        uint256 invoicePrice = 100 ether;
+        vm.prank(creatorOne);
+        uint256 invoiceId = pp.createInvoice(invoicePrice);
+
+        vm.prank(payerOne);
+        pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
+
+        vm.warp(block.timestamp + ACCEPTANCE_WINDOW + 1);
+        vm.prank(creatorOne);
+        vm.expectRevert(AcceptanceWindowExceeded.selector);
+        pp.creatorsAction(invoiceId, true);
+    }
+
+    function test_payer_refund_acceptance_window() public {
+        uint256 invoicePrice = 100 ether;
+        vm.prank(creatorOne);
+        uint256 invoiceId = pp.createInvoice(invoicePrice);
+
+        // 10000
+        uint256 balanceBeforePayment = payerOne.balance;
+        vm.prank(payerOne);
+        pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
+        // 10000 - 100 = 9900
+
+        vm.startPrank(payerOne);
+        vm.expectRevert(InvoiceNotEligibleForRefund.selector);
+        pp.refundCreatorAfterWindow(invoiceId);
+
+        vm.warp(block.timestamp + ACCEPTANCE_WINDOW + 1);
+        pp.refundCreatorAfterWindow(invoiceId);
+        vm.stopPrank();
+
+        // 9900 + 99 = 9999
+
+        uint256 balanceAfterRefund = payerOne.balance;
+
+        assertEq(pp.getInvoiceData(invoiceId).status, REFUNDED);
+        assertEq(balanceBeforePayment - FEE, balanceAfterRefund);
+    }
+
     function test_payment_rejection() public {
         uint256 invoicePrice = 100 ether;
         vm.prank(creatorOne);
@@ -232,7 +285,7 @@ contract PaymentProcessorTest is Test {
         vm.prank(payerOne);
         pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
 
-        // ACCEPT
+        // // ACCEPT
         vm.prank(creatorOne);
         pp.creatorsAction(invoiceId, true);
 
@@ -308,5 +361,6 @@ contract PaymentProcessorTest is Test {
         vm.prank(owner);
         pp.withdrawFees();
         assertEq(address(feeReceiver).balance, FEE + receiversBalanceBefore);
+        assertEq(address(pp).balance, 0);
     }
 }

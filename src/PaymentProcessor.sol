@@ -6,7 +6,16 @@ import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { IEscrow, EscrowFactory } from "./EscrowFactory.sol";
 import { Invoice, IPaymentProcessor } from "./interface/IPaymentProcessor.sol";
-import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "./utils/Constants.sol";
+import {
+    CREATED,
+    ACCEPTED,
+    REJECTED,
+    PAID,
+    CANCELLED,
+    REFUNDED,
+    VALID_PERIOD,
+    ACCEPTANCE_WINDOW
+} from "./utils/Constants.sol";
 import {
     ValueIsTooLow,
     TransferFailed,
@@ -17,10 +26,12 @@ import {
     InvalidInvoiceState,
     FeeValueCanNotBeZero,
     InvoicePriceIsTooLow,
-    HoldPeriodCanNotBeZero,
     InvoiceIsNoLongerValid,
+    HoldPeriodCanNotBeZero,
     ZeroAddressIsNotAllowed,
+    AcceptanceWindowExceeded,
     CreatorCannotPayOwnInvoice,
+    InvoiceNotEligibleForRefund,
     HoldPeriodHasNotBeenExceeded,
     HoldPeriodShouldBeGreaterThanDefault
 } from "./utils/Errors.sol";
@@ -115,6 +126,7 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
     /// inheritdoc IPaymentProcessor
     function creatorsAction(uint256 _invoiceId, bool _state) external {
         Invoice memory invoice = invoiceData[_invoiceId];
+        if (block.timestamp > invoice.paymentTime + ACCEPTANCE_WINDOW) revert AcceptanceWindowExceeded();
         if (invoice.creator != msg.sender) {
             revert Unauthorized();
         }
@@ -148,6 +160,17 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
         }
         IEscrow(invoice.escrow).withdrawToCreator(msg.sender);
         emit InvoiceReleased(_invoiceId);
+    }
+
+    /// inheritdoc IPaymentProcessor
+    function refundCreatorAfterWindow(uint256 _invoiceId) external {
+        Invoice memory invoice = invoiceData[_invoiceId];
+        if (invoice.status != PAID || block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
+            revert InvoiceNotEligibleForRefund();
+        }
+
+        IEscrow(invoice.escrow).refundToPayer(invoice.payer);
+        invoiceData[_invoiceId].status = REFUNDED;
     }
 
     /**

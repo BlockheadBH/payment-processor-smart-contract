@@ -40,8 +40,14 @@ error InvoiceAlreadyPaid();
 /// @notice Thrown when an action is attempted on a non-existent invoice.
 error InvoiceDoesNotExist();
 
+/// @notice Thrown when the creator attempts to take action on an invoice after the acceptance window has expired.
+error AcceptanceWindowExceeded();
+
 /// @notice Thrown when the creator of an invoice attempts to pay for their own invoice.
 error CreatorCannotPayOwnInvoice();
+
+/// @notice Reverts when an invoice is not eligible for a refund to the creator.
+error InvoiceNotEligibleForRefund();
 
 /// @notice Thrown when the hold period for an invoice has not yet been exceeded.
 error HoldPeriodHasNotBeenExceeded();
