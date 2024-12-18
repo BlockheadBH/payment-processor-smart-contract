@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 
 import { Test, console } from "forge-std/Test.sol";
-import { Invoice } from "../src/Types/InvoiceType.sol";
-import { PaymentProcessor } from "../src/PaymentProcessor.sol";
-import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "../src/utils/Constants.sol";
+import { Invoice } from "../../src/Types/InvoiceType.sol";
+import { PaymentProcessor } from "../../src/PaymentProcessor.sol";
+import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "../../src/utils/Constants.sol";
 import {
     Unauthorized,
     ValueIsTooLow,
@@ -21,7 +21,7 @@ import {
     CreatorCannotPayOwnInvoice,
     HoldPeriodHasNotBeenExceeded,
     HoldPeriodShouldBeGreaterThanDefault
-} from "../src/utils/Errors.sol";
+} from "../../src/utils/Errors.sol";
 
 contract PaymentProcessorTest is Test {
     PaymentProcessor pp;

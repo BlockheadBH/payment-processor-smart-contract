@@ -4,9 +4,11 @@ pragma solidity 0.8.28;
 import { IEscrow } from "./interface/IEscrow.sol";
 import { Unauthorized, ValueIsTooLow, TransferFailed } from "./utils/Errors.sol";
 
+// balance === address(this).balance
+
 contract Escrow is IEscrow {
-    /// @notice The initial balance deposited into the contract.
-    uint256 public immutable balance;
+    /// @notice The initial value deposited into the contract.
+    uint256 public balance;
 
     /// @notice The address of the payer associated with this escrow.
     address public immutable payer;
@@ -27,7 +29,8 @@ contract Escrow is IEscrow {
 
     /**
      * @notice Initializes the escrow contract with invoice details and deposits the funds.
-     * @dev This constructor sets the invoice ID, creator, payer, and payment processor addresses, and records the sent Ether as the balance.
+     * @dev This constructor sets the invoice ID, creator, payer, and payment processor addresses, and records the sent
+     * Ether as the balance.
      * @param _invoiceId The unique identifier of the invoice associated with this escrow.
      * @param _creator The address of the invoice creator.
      * @param _payer The address of the payer for the invoice.
@@ -63,6 +66,7 @@ contract Escrow is IEscrow {
      */
     function _withdraw(address _to) internal returns (uint256) {
         uint256 bal = balance;
+        balance = 0;
         (bool success,) = payable(_to).call{ value: address(this).balance }("");
         if (!success) {
             revert TransferFailed();

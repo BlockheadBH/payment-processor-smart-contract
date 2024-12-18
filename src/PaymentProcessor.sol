@@ -25,6 +25,17 @@ import {
     HoldPeriodShouldBeGreaterThanDefault
 } from "./utils/Errors.sol";
 
+// 1. do left over test ✅
+// 2. re-read the docs and cross check the code to confirm if it's in line. There are changes start from 1 again
+// 3. Is there an invariant ? Yes. Test it else jump over to 3.
+// 4. Run slither and aderyn
+// 5. Security checks. Are we following CEI ?
+// 6. Recheck events
+// 7. Let the auditors know custom types were intentionally ignore so simplicity at this stage
+
+// Existing invoice must have a state
+// Ensure the contract has fee
+
 contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
     using SafeCastLib for uint256;
 
@@ -156,7 +167,8 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
      * @dev This function updates the invoice status to `REJECTED`, refunds the payer via the escrow contract,
      *      and emits the `InvoiceRejected` event.
      * @param _invoiceId The ID of the invoice being rejected.
-     * @param invoice The `Invoice` struct containing details of the invoice to be rejected, including the escrow address and payer.
+     * @param invoice The `Invoice` struct containing details of the invoice to be rejected, including the escrow
+     * address and payer.
      */
     function _rejectInvoice(uint256 _invoiceId, Invoice memory invoice) internal {
         invoiceData[_invoiceId].status = REJECTED;
