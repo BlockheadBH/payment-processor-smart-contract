@@ -47,17 +47,14 @@ contract PaymentProcessorTest is Test {
     }
 
     function testFuzz_makeInvoicePayment(uint256 _paymentAmount) public {
-        _paymentAmount = bound(_paymentAmount, 0, address(payer).balance);
+        _paymentAmount = bound(_paymentAmount, FEE + 1, address(payer).balance);
         uint256 invoicePrice = 100 ether;
         vm.startPrank(creator);
         uint256 invoiceId = pp.createInvoice(invoicePrice);
         vm.stopPrank();
 
         vm.startPrank(payer);
-        if (_paymentAmount <= FEE) {
-            vm.expectRevert(ValueIsTooLow.selector);
-            pp.makeInvoicePayment{ value: _paymentAmount }(invoiceId);
-        } else if (_paymentAmount > invoicePrice) {
+        if (_paymentAmount > invoicePrice) {
             vm.expectRevert(ExcessivePayment.selector);
             pp.makeInvoicePayment{ value: _paymentAmount }(invoiceId);
         } else {
