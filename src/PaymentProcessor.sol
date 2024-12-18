@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import { Ownable } from "solady/auth/Ownable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
-import { IEscrow, EscrowFactory } from "./EscrowFactory.sol";
+import { IEscrow, Escrow } from "./Escrow.sol";
 import { Invoice, IPaymentProcessor } from "./interface/IPaymentProcessor.sol";
 import {
     CREATED,
@@ -47,7 +47,7 @@ import {
 // Existing invoice must have a state
 // Ensure the contract has fee
 
-contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
+contract PaymentProcessor is Ownable, IPaymentProcessor {
     using SafeCastLib for uint256;
 
     /// @notice The fee amount charged for using this service, denominated in wei.
@@ -110,7 +110,9 @@ contract PaymentProcessor is Ownable, IPaymentProcessor, EscrowFactory {
             revert ValueIsTooLow();
         }
 
-        address escrow = _create(invoice.creator, _invoiceId, msg.value - bhFee);
+        Escrow e = new Escrow{ value: msg.value - bhFee }(_invoiceId, invoice.creator, msg.sender, address(this));
+
+        address escrow = address(e);
 
         invoice.escrow = escrow;
         invoice.payer = msg.sender;

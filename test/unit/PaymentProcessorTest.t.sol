@@ -179,10 +179,6 @@ contract PaymentProcessorTest is Test {
         pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
         vm.stopPrank();
 
-        address computedAddress = pp.getPredictedAddress(pp.computeSalt(creatorOne, payerOne, invoiceId));
-
-        assertEq(escrowAddress, computedAddress);
-
         Invoice memory invoiceData = pp.getInvoiceData(invoiceId);
 
         assertEq(payerOne.balance, PAYER_ONE_INITIAL_BALANCE - invoicePrice);
