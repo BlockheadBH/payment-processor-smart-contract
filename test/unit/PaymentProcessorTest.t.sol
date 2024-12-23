@@ -10,6 +10,7 @@ import {
     REJECTED,
     PAID,
     CANCELLED,
+    RELEASED,
     REFUNDED,
     ACCEPTANCE_WINDOW,
     VALID_PERIOD
@@ -298,6 +299,7 @@ contract PaymentProcessorTest is Test {
         vm.stopPrank();
 
         assertEq(creatorOne.balance, invoicePrice - FEE);
+        assertEq(pp.getInvoiceData(invoiceId).status, RELEASED);
     }
 
     function test_dynamic_hold_release_invoice() public {
@@ -331,6 +333,7 @@ contract PaymentProcessorTest is Test {
         pp.releaseInvoice(invoiceId);
 
         assertEq(creatorOne.balance, invoicePrice - FEE);
+        assertEq(pp.getInvoiceData(invoiceId).status, RELEASED);
     }
 
     function test_Ether_Withdrawal() public {

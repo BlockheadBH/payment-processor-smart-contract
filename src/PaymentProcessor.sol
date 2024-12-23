@@ -13,6 +13,7 @@ import {
     PAID,
     CANCELLED,
     REFUNDED,
+    RELEASED,
     VALID_PERIOD,
     ACCEPTANCE_WINDOW
 } from "./utils/Constants.sol";
@@ -43,6 +44,7 @@ import {
 // 5. Security checks. Are we following CEI ?
 // 6. Recheck events
 // 7. Let the auditors know custom types were intentionally ignore so simplicity at this stage
+// remove  console.logs
 
 // Existing invoice must have a state
 // Ensure the contract has fee
@@ -77,6 +79,7 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
         if (_invoicePrice <= fee) {
             revert InvoicePriceIsTooLow();
         }
+
         uint256 thisInvoiceId = currentInvoiceId;
         Invoice memory invoice = invoiceData[thisInvoiceId];
         invoice.creator = msg.sender;
@@ -84,8 +87,10 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
         invoice.price = _invoicePrice;
         invoice.status = CREATED;
         invoiceData[thisInvoiceId] = invoice;
-        emit InvoiceCreated(msg.sender, thisInvoiceId, block.timestamp);
         currentInvoiceId++;
+
+        emit InvoiceCreated(thisInvoiceId, msg.sender, block.timestamp, _invoicePrice);
+
         return thisInvoiceId;
     }
 
@@ -110,9 +115,8 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
             revert ValueIsTooLow();
         }
 
-        Escrow e = new Escrow{ value: msg.value - bhFee }(_invoiceId, invoice.creator, msg.sender, address(this));
-
-        address escrow = address(e);
+        address escrow =
+            address(new Escrow{ value: msg.value - bhFee }(_invoiceId, invoice.creator, msg.sender, address(this)));
 
         invoice.escrow = escrow;
         invoice.payer = msg.sender;
@@ -121,7 +125,7 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
         invoice.holdPeriod = (defaultHoldPeriod + block.timestamp).toUint32();
         invoiceData[_invoiceId] = invoice;
 
-        emit InvoicePaid(invoice.creator, msg.sender, msg.value);
+        emit InvoicePaid(_invoiceId, msg.sender, msg.value, block.timestamp);
         return escrow;
     }
 
@@ -135,7 +139,7 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
         if (invoice.status != PAID) {
             revert InvoiceNotPaid();
         }
-        _state ? _acceptInvoice(_invoiceId, invoice.payer) : _rejectInvoice(_invoiceId, invoice);
+        _state ? _acceptInvoice(_invoiceId) : _rejectInvoice(_invoiceId, invoice);
     }
 
     /// inheritdoc IPaymentProcessor
@@ -152,14 +156,19 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
     }
 
     /// inheritdoc IPaymentProcessor
+
     function releaseInvoice(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
+        // @note revert if it has already been released
         if (invoice.creator != msg.sender) {
             revert Unauthorized();
         }
         if (block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
             revert HoldPeriodHasNotBeenExceeded();
         }
+
+        // can it be re-entered ?
+        invoiceData[_invoiceId].status = RELEASED;
         IEscrow(invoice.escrow).withdrawToCreator(msg.sender);
         emit InvoiceReleased(_invoiceId);
     }
@@ -170,9 +179,9 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
         if (invoice.status != PAID || block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
             revert InvoiceNotEligibleForRefund();
         }
-
-        IEscrow(invoice.escrow).refundToPayer(invoice.payer);
         invoiceData[_invoiceId].status = REFUNDED;
+        IEscrow(invoice.escrow).refundToPayer(invoice.payer);
+        emit InvoiceRefunded(_invoiceId);
     }
 
     /**
@@ -180,11 +189,10 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
      * @dev This function updates the status of the invoice to `ACCEPTED` and emits the `InvoiceAccepted` event.
      *      It is expected that the creator is approving the payment for the invoice.
      * @param _invoiceId The ID of the invoice being accepted.
-     * @param _payer The address of the payer who accepts the invoice.
      */
-    function _acceptInvoice(uint256 _invoiceId, address _payer) internal {
+    function _acceptInvoice(uint256 _invoiceId) internal {
         invoiceData[_invoiceId].status = ACCEPTED;
-        emit InvoiceAccepted(msg.sender, _payer, _invoiceId);
+        emit InvoiceAccepted(_invoiceId, block.timestamp);
     }
 
     /**
@@ -198,7 +206,7 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
     function _rejectInvoice(uint256 _invoiceId, Invoice memory invoice) internal {
         invoiceData[_invoiceId].status = REJECTED;
         IEscrow(invoice.escrow).refundToPayer(invoice.payer);
-        emit InvoiceRejected(msg.sender, invoice.payer, _invoiceId);
+        emit InvoiceRejected(_invoiceId);
     }
 
     /// inheritdoc IPaymentProcessor

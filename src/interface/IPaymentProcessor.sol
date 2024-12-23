@@ -121,33 +121,36 @@ interface IPaymentProcessor {
      * @notice Emitted when a new invoice is created.
      * @param creator The address of the invoice creator.
      * @param invoiceId The unique ID of the created invoice.
+     * @param price The price of the invoice that was created.
      * @param createdAt The timestamp when the invoice was created.
      */
-    event InvoiceCreated(address indexed creator, uint256 indexed invoiceId, uint256 indexed createdAt);
+    event InvoiceCreated(uint256 indexed invoiceId, address indexed creator, uint256 price, uint256 indexed createdAt);
 
     /**
      * @notice Emitted when an invoice payment is made.
-     * @param creator The address of the invoice creator.
-     * @param payer The address of the payer who made the payment.
+     * @param invoiceId The unique ID of the accepted invoice.
      * @param amountPayed The amount paid towards the invoice in wei.
      */
-    event InvoicePaid(address indexed creator, address indexed payer, uint256 indexed amountPayed);
+    event InvoicePaid(uint256 indexed invoiceId, address indexed payer, uint256 indexed amountPayed, uint256 payedAt);
 
     /**
      * @notice Emitted when an invoice is rejected by the creator.
-     * @param creator The address of the invoice creator.
-     * @param payer The address of the payer associated with the invoice.
      * @param invoiceId The unique ID of the rejected invoice.
      */
-    event InvoiceRejected(address indexed creator, address indexed payer, uint256 indexed invoiceId);
+    event InvoiceRejected(uint256 indexed invoiceId);
+
+    /**
+     * @notice Emitted when an invoice is refunded to the payer.
+     * @param invoiceId The unique ID of the rejected invoice.
+     */
+    event InvoiceRefunded(uint256 indexed invoiceId);
 
     /**
      * @notice Emitted when an invoice is accepted by the creator.
-     * @param creator The address of the invoice creator.
-     * @param payer The address of the payer associated with the invoice.
      * @param invoiceId The unique ID of the accepted invoice.
+     * @param acceptedAt The timestamp which the invoice was accepted
      */
-    event InvoiceAccepted(address indexed creator, address indexed payer, uint256 indexed invoiceId);
+    event InvoiceAccepted(uint256 indexed invoiceId, uint256 indexed acceptedAt);
 
     /**
      * @notice Emitted when an invoice is canceled.
