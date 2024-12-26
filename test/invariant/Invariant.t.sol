@@ -50,4 +50,8 @@ contract Invariant is StdInvariant, Test {
     function invariant_feeBalance() public view {
         assertEq(handler.balance(), address(pp).balance);
     }
+
+    function invariant_callSummary() public view {
+        handler.callSummary();
+    }
 }

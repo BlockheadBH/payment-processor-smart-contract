@@ -67,7 +67,7 @@ contract Escrow is IEscrow {
     function _withdraw(address _to) internal returns (uint256) {
         uint256 bal = balance;
         balance = 0;
-        (bool success,) = payable(_to).call{ value: address(this).balance }("");
+        (bool success,) = _to.call{ value: address(this).balance }("");
         if (!success) {
             revert TransferFailed();
         }

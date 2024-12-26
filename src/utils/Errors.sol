@@ -54,3 +54,6 @@ error HoldPeriodHasNotBeenExceeded();
 
 /// @notice Thrown when attempting to set a custom hold period that is less than the default hold period.
 error HoldPeriodShouldBeGreaterThanDefault();
+
+/// @notice Error thrown when attempting to release an invoice that has already been released.
+error InvoiceHasAlreadyBeenReleased();

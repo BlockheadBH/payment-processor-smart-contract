@@ -32,6 +32,7 @@ import {
     CreatorCannotPayOwnInvoice,
     InvoiceNotEligibleForRefund,
     HoldPeriodHasNotBeenExceeded,
+    InvoiceHasAlreadyBeenReleased,
     HoldPeriodShouldBeGreaterThanDefault
 } from "../../src/utils/Errors.sol";
 
@@ -241,10 +242,10 @@ contract PaymentProcessorTest is Test {
 
         vm.startPrank(payerOne);
         vm.expectRevert(InvoiceNotEligibleForRefund.selector);
-        pp.refundCreatorAfterWindow(invoiceId);
+        pp.refundPayerAfterWindow(invoiceId);
 
         vm.warp(block.timestamp + ACCEPTANCE_WINDOW + 1);
-        pp.refundCreatorAfterWindow(invoiceId);
+        pp.refundPayerAfterWindow(invoiceId);
         vm.stopPrank();
 
         // 9900 + 99 = 9999
@@ -295,6 +296,9 @@ contract PaymentProcessorTest is Test {
         pp.releaseInvoice(invoiceId);
 
         vm.warp(block.timestamp + DEFAULT_HOLD_PERIOD + 1);
+        pp.releaseInvoice(invoiceId);
+
+        vm.expectRevert(InvoiceHasAlreadyBeenReleased.selector);
         pp.releaseInvoice(invoiceId);
         vm.stopPrank();
 

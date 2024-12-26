@@ -34,20 +34,23 @@ import {
     CreatorCannotPayOwnInvoice,
     InvoiceNotEligibleForRefund,
     HoldPeriodHasNotBeenExceeded,
+    InvoiceHasAlreadyBeenReleased,
     HoldPeriodShouldBeGreaterThanDefault
 } from "./utils/Errors.sol";
 
 // 1. do left over test ✅
-// 2. re-read the docs and cross check the code to confirm if it's in line. There are changes start from 1 again
-// 3. Is there an invariant ? Yes. Test it else jump over to 3.
-// 4. Run slither and aderyn
+// 2. re-read the docs and cross check the code to confirm if it's in line. There are changes start from 1 again  ✅
+// 3. Is there an invariant ? Yes. Test it else jump over to 3 ✅.
+// 4. Run slither and aderyn ✅
 // 5. Security checks. Are we following CEI ?
-// 6. Recheck events
+// 6. Recheck events ✅
 // 7. Let the auditors know custom types were intentionally ignore so simplicity at this stage
-// remove  console.logs
+// remove  console.logs ✅
 
 // Existing invoice must have a state
 // Ensure the contract has fee
+
+// VERSION
 
 contract PaymentProcessor is Ownable, IPaymentProcessor {
     using SafeCastLib for uint256;
@@ -95,18 +98,21 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
     }
 
     /// inheritdoc IPaymentProcessor
+
     function makeInvoicePayment(uint256 _invoiceId) external payable returns (address) {
         Invoice memory invoice = invoiceData[_invoiceId];
         uint256 bhFee = fee;
+
+        if (invoice.status != CREATED) {
+            revert InvalidInvoiceState();
+        }
 
         if (invoice.creator == msg.sender) revert CreatorCannotPayOwnInvoice();
 
         if (msg.value > invoice.price) {
             revert ExcessivePayment();
         }
-        if (invoice.status != CREATED) {
-            revert InvalidInvoiceState();
-        }
+
         if (block.timestamp > invoice.creationTime + VALID_PERIOD) {
             revert InvoiceIsNoLongerValid();
         }
@@ -159,7 +165,8 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
 
     function releaseInvoice(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
-        // @note revert if it has already been released
+
+        if (invoice.status == RELEASED) revert InvoiceHasAlreadyBeenReleased();
         if (invoice.creator != msg.sender) {
             revert Unauthorized();
         }
@@ -174,7 +181,7 @@ contract PaymentProcessor is Ownable, IPaymentProcessor {
     }
 
     /// inheritdoc IPaymentProcessor
-    function refundCreatorAfterWindow(uint256 _invoiceId) external {
+    function refundPayerAfterWindow(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
         if (invoice.status != PAID || block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
             revert InvoiceNotEligibleForRefund();

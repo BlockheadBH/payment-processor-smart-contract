@@ -10,8 +10,3 @@ uint32 constant REFUNDED = CANCELLED + 1;
 uint32 constant RELEASED = REFUNDED + 1;
 uint256 constant VALID_PERIOD = 180 days;
 uint256 constant ACCEPTANCE_WINDOW = 3 days;
-
-// CREATED -> PAID -> ACCEPTED -> RELEASED
-// CREATED -> REJECTED
-// CREATED -> CANCELLED
-// CREATED -> REFUNDED

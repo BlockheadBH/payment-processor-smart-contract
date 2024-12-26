@@ -59,12 +59,12 @@ interface IPaymentProcessor {
 
     /**
      * @notice Refunds the creator of a specific invoice.
-     * @dev This function allows the creator to be refund if the acceptance window has not been exceeded
+     * @dev This function allows the payer to be refund if the acceptance window has not been exceeded
      *      and the invoice is eligible for a refund. The refund will be processed through the escrow contract.
      * @param _invoiceId The ID of the invoice to be refunded.
      *
      */
-    function refundCreatorAfterWindow(uint256 _invoiceId) external;
+    function refundPayerAfterWindow(uint256 _invoiceId) external;
 
     /**
      * @notice Updates the default hold period for all new invoices.
