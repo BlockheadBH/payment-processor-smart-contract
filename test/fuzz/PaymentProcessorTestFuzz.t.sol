@@ -3,12 +3,18 @@ pragma solidity 0.8.28;
 
 import { Test, console } from "forge-std/Test.sol";
 import { Invoice } from "../../src/Types/InvoiceType.sol";
-import { PaymentProcessor } from "../../src/PaymentProcessor.sol";
-import { CREATED, ACCEPTED, REJECTED, PAID, CANCELLED, VALID_PERIOD } from "../../src/utils/Constants.sol";
-import { ValueIsTooLow, ExcessivePayment } from "../../src/utils/Errors.sol";
+import { IPaymentProcessorV1, PaymentProcessorV1 } from "../../src/PaymentProcessorV1.sol";
+import {
+    CREATED,
+    ACCEPTED,
+    REJECTED,
+    PAID,
+    CANCELLED,
+    VALID_PERIOD
+} from "../../src/utils/Constants.sol";
 
 contract PaymentProcessorTest is Test {
-    PaymentProcessor pp;
+    PaymentProcessorV1 pp;
 
     address owner;
     address feeReceiver;
@@ -27,7 +33,7 @@ contract PaymentProcessorTest is Test {
         payer = makeAddr("payer");
         vm.deal(payer, PAYER_ONE_INITIAL_BALANCE);
         vm.prank(owner);
-        pp = new PaymentProcessor(feeReceiver, FEE, DEFAULT_HOLD_PERIOD);
+        pp = new PaymentProcessorV1(feeReceiver, FEE, DEFAULT_HOLD_PERIOD);
     }
 
     function testFuzz_invoice_creation(uint256 _amount) public {

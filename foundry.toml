@@ -6,7 +6,7 @@ libs = ["lib"]
 remappings = ["solady/=lib/solady/src/"]
 
 [fmt]
-line_length = 120
+line_length = 100
 bracket_spacing = true
 
 [invariant]

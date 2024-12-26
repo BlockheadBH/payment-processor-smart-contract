@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import { Test, console } from "forge-std/Test.sol";
 import { Invoice } from "../../src/Types/InvoiceType.sol";
-import { PaymentProcessor } from "../../src/PaymentProcessor.sol";
+import { IPaymentProcessorV1, PaymentProcessorV1 } from "../../src/PaymentProcessorV1.sol";
 import {
     CREATED,
     ACCEPTED,
@@ -15,29 +15,11 @@ import {
     ACCEPTANCE_WINDOW,
     VALID_PERIOD
 } from "../../src/utils/Constants.sol";
-import {
-    Unauthorized,
-    ValueIsTooLow,
-    InvoiceNotPaid,
-    ExcessivePayment,
-    InvoiceAlreadyPaid,
-    InvoiceDoesNotExist,
-    InvalidInvoiceState,
-    FeeValueCanNotBeZero,
-    InvoicePriceIsTooLow,
-    HoldPeriodCanNotBeZero,
-    InvoiceIsNoLongerValid,
-    ZeroAddressIsNotAllowed,
-    AcceptanceWindowExceeded,
-    CreatorCannotPayOwnInvoice,
-    InvoiceNotEligibleForRefund,
-    HoldPeriodHasNotBeenExceeded,
-    InvoiceHasAlreadyBeenReleased,
-    HoldPeriodShouldBeGreaterThanDefault
-} from "../../src/utils/Errors.sol";
+
+error Unauthorized();
 
 contract PaymentProcessorTest is Test {
-    PaymentProcessor pp;
+    PaymentProcessorV1 pp;
 
     address owner;
     address feeReceiver;
@@ -64,7 +46,7 @@ contract PaymentProcessorTest is Test {
         vm.deal(payerTwo, PAYER_TWO_INITIAL_BALANCE);
 
         vm.prank(owner);
-        pp = new PaymentProcessor(feeReceiver, FEE, DEFAULT_HOLD_PERIOD);
+        pp = new PaymentProcessorV1(feeReceiver, FEE, DEFAULT_HOLD_PERIOD);
         vm.stopPrank();
     }
 
@@ -78,13 +60,13 @@ contract PaymentProcessorTest is Test {
     function test_setters() public {
         vm.startPrank(owner);
 
-        vm.expectRevert(FeeValueCanNotBeZero.selector);
+        vm.expectRevert(IPaymentProcessorV1.FeeValueCanNotBeZero.selector);
         pp.setFee(0);
 
-        vm.expectRevert(HoldPeriodCanNotBeZero.selector);
+        vm.expectRevert(IPaymentProcessorV1.HoldPeriodCanNotBeZero.selector);
         pp.setDefaultHoldPeriod(0);
 
-        vm.expectRevert(ZeroAddressIsNotAllowed.selector);
+        vm.expectRevert(IPaymentProcessorV1.ZeroAddressIsNotAllowed.selector);
         pp.setFeeReceiversAddress(address(0));
         vm.stopPrank();
     }
@@ -136,7 +118,7 @@ contract PaymentProcessorTest is Test {
         pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
 
         vm.startPrank(creatorOne);
-        vm.expectRevert(InvoiceAlreadyPaid.selector);
+        vm.expectRevert(IPaymentProcessorV1.InvoiceAlreadyPaid.selector);
         pp.cancelInvoice(invoiceId);
 
         uint256 newInvoiceId = pp.createInvoice(invoicePrice);
@@ -153,23 +135,23 @@ contract PaymentProcessorTest is Test {
         vm.startPrank(creatorOne);
         uint256 invoiceId = pp.createInvoice(invoicePrice);
 
-        vm.expectRevert(CreatorCannotPayOwnInvoice.selector);
+        vm.expectRevert(IPaymentProcessorV1.CreatorCannotPayOwnedInvoice.selector);
         pp.makeInvoicePayment{ value: 1 }(invoiceId);
         vm.stopPrank();
 
         vm.startPrank(payerOne);
         // TRY VERY LOW PAYMENT
-        vm.expectRevert(ValueIsTooLow.selector);
+        vm.expectRevert(IPaymentProcessorV1.ValueIsTooLow.selector);
         pp.makeInvoicePayment{ value: FEE }(invoiceId);
 
         // TRY EXCESSIVE PAYMENT
 
-        vm.expectRevert(ExcessivePayment.selector);
+        vm.expectRevert(IPaymentProcessorV1.ExcessivePayment.selector);
         pp.makeInvoicePayment{ value: invoicePrice + 1 }(invoiceId);
 
         // TRY EXPIRED INVOICE
         vm.warp(block.timestamp + VALID_PERIOD + 1);
-        vm.expectRevert(InvoiceIsNoLongerValid.selector);
+        vm.expectRevert(IPaymentProcessorV1.InvoiceIsNoLongerValid.selector);
         pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
 
         // MAKE VALID PAYMENT
@@ -177,7 +159,7 @@ contract PaymentProcessorTest is Test {
         address escrowAddress = pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
 
         // TRY ALREADY PAID INVOICE
-        vm.expectRevert(InvalidInvoiceState.selector);
+        vm.expectRevert(IPaymentProcessorV1.InvalidInvoiceState.selector);
         pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
         vm.stopPrank();
 
@@ -204,7 +186,7 @@ contract PaymentProcessorTest is Test {
         vm.warp(block.number + 10);
 
         vm.prank(creatorOne);
-        vm.expectRevert(InvoiceNotPaid.selector);
+        vm.expectRevert(IPaymentProcessorV1.InvoiceNotPaid.selector);
         pp.creatorsAction(invoiceId, true);
 
         vm.prank(payerOne);
@@ -225,7 +207,7 @@ contract PaymentProcessorTest is Test {
 
         vm.warp(block.timestamp + ACCEPTANCE_WINDOW + 1);
         vm.prank(creatorOne);
-        vm.expectRevert(AcceptanceWindowExceeded.selector);
+        vm.expectRevert(IPaymentProcessorV1.AcceptanceWindowExceeded.selector);
         pp.creatorsAction(invoiceId, true);
     }
 
@@ -241,7 +223,7 @@ contract PaymentProcessorTest is Test {
         // 10000 - 100 = 9900
 
         vm.startPrank(payerOne);
-        vm.expectRevert(InvoiceNotEligibleForRefund.selector);
+        vm.expectRevert(IPaymentProcessorV1.InvoiceNotEligibleForRefund.selector);
         pp.refundPayerAfterWindow(invoiceId);
 
         vm.warp(block.timestamp + ACCEPTANCE_WINDOW + 1);
@@ -292,13 +274,13 @@ contract PaymentProcessorTest is Test {
         pp.releaseInvoice(invoiceId);
 
         vm.startPrank(creatorOne);
-        vm.expectRevert(HoldPeriodHasNotBeenExceeded.selector);
+        vm.expectRevert(IPaymentProcessorV1.HoldPeriodHasNotBeenExceeded.selector);
         pp.releaseInvoice(invoiceId);
 
         vm.warp(block.timestamp + DEFAULT_HOLD_PERIOD + 1);
         pp.releaseInvoice(invoiceId);
 
-        vm.expectRevert(InvoiceHasAlreadyBeenReleased.selector);
+        vm.expectRevert(IPaymentProcessorV1.InvoiceHasAlreadyBeenReleased.selector);
         pp.releaseInvoice(invoiceId);
         vm.stopPrank();
 
@@ -310,7 +292,7 @@ contract PaymentProcessorTest is Test {
         uint32 adminHoldPeriod = 25 days;
 
         vm.prank(owner);
-        vm.expectRevert(InvoiceDoesNotExist.selector);
+        vm.expectRevert(IPaymentProcessorV1.InvoiceDoesNotExist.selector);
         pp.setInvoiceHoldPeriod(1, adminHoldPeriod);
 
         // CREATE
@@ -327,7 +309,7 @@ contract PaymentProcessorTest is Test {
         pp.creatorsAction(invoiceId, true);
 
         vm.startPrank(owner);
-        vm.expectRevert(HoldPeriodShouldBeGreaterThanDefault.selector);
+        vm.expectRevert(IPaymentProcessorV1.HoldPeriodShouldBeGreaterThanDefault.selector);
         pp.setInvoiceHoldPeriod(invoiceId, 5 minutes);
         pp.setInvoiceHoldPeriod(invoiceId, uint32(adminHoldPeriod + block.timestamp));
         vm.stopPrank();

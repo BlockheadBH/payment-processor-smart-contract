@@ -2,11 +2,11 @@
 pragma solidity 0.8.28;
 
 import { Test, console } from "forge-std/Test.sol";
-import { PaymentProcessor } from "../../src/PaymentProcessor.sol";
+import { PaymentProcessorV1 } from "../../src/PaymentProcessorV1.sol";
 import "../../src/utils/Constants.sol";
 
 contract Handler is Test {
-    PaymentProcessor public pp;
+    PaymentProcessorV1 public pp;
 
     uint256 public balance;
     uint256 public totalInvoiceCreated;
@@ -29,7 +29,7 @@ contract Handler is Test {
         _;
     }
 
-    constructor(PaymentProcessor _pp) {
+    constructor(PaymentProcessorV1 _pp) {
         totalInvoiceCreated = 1;
         creator = address(1);
         payer = address(2);

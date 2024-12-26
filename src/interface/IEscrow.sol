@@ -2,6 +2,15 @@
 pragma solidity 0.8.28;
 
 interface IEscrow {
+    /// @notice Thrown when an unauthorized address attempts to perform a restricted action.
+    error Unauthorized();
+
+    /// @notice Thrown when the provided value is lower than the required minimum.
+    error ValueIsTooLow();
+
+    /// @notice Thrown when a fund transfer fails.
+    error TransferFailed();
+
     /**
      * @notice Refunds the balance held in escrow to the payer when invoice is rejected.
      * @dev Only callable by the payment processor contract.
@@ -30,7 +39,9 @@ interface IEscrow {
      * @param creator The address of the creator receiving the withdrawn funds.
      * @param amount The amount withdrawn in wei.
      */
-    event FundsWithdrawn(uint256 indexed invoiceId, address indexed creator, uint256 indexed amount);
+    event FundsWithdrawn(
+        uint256 indexed invoiceId, address indexed creator, uint256 indexed amount
+    );
 
     /**
      * @notice Emitted when funds are deposited into the escrow for an invoice.

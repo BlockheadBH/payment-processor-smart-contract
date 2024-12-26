@@ -8,7 +8,11 @@ import { IEscrowFactory } from "./interface/IEscrowFactory.sol";
 
 abstract contract EscrowFactory is IEscrowFactory {
     /// @inheritdoc IEscrowFactory
-    function computeSalt(address _creator, address _payer, uint256 _invoiceId) public pure returns (bytes32) {
+    function computeSalt(address _creator, address _payer, uint256 _invoiceId)
+        public
+        pure
+        returns (bytes32)
+    {
         return keccak256(abi.encode(_creator, _payer, _invoiceId));
     }
 
@@ -26,7 +30,10 @@ abstract contract EscrowFactory is IEscrowFactory {
      * @param _invoicePaymentValue The value of the payment associated with the escrow.
      * @return The address of the newly deployed `Escrow` contract.
      */
-    function _create(address _creator, uint256 _invoiceId, uint256 _invoicePaymentValue) internal returns (address) {
+    function _create(address _creator, uint256 _invoiceId, uint256 _invoicePaymentValue)
+        internal
+        returns (address)
+    {
         bytes memory constructorArg = abi.encode(_invoiceId, _creator, msg.sender, address(this));
         bytes32 salt = computeSalt(_creator, msg.sender, _invoiceId);
 

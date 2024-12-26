@@ -19,7 +19,10 @@ interface IEscrowFactory {
      * @param _invoiceId The unique ID of the invoice.
      * @return A `bytes32` salt value derived from the input parameters.
      */
-    function computeSalt(address _creator, address _payer, uint256 _invoiceId) external pure returns (bytes32);
+    function computeSalt(address _creator, address _payer, uint256 _invoiceId)
+        external
+        pure
+        returns (bytes32);
 
     /**
      * @notice Emitted when a new escrow contract is created.
