@@ -129,7 +129,7 @@ interface IPaymentProcessorV1 {
     function setDefaultHoldPeriod(uint256 _newDefaultHoldPeriod) external;
 
     /**
-     * @notice Updates the fee for invoice creation.
+     * @notice Updates the fee for using Blockhead service.
      * @dev Only callable by the contract owner.
      * @param _newFee The new fee amount in wei.
      */

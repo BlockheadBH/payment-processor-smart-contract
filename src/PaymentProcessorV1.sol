@@ -97,7 +97,6 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
         invoice.payer = msg.sender;
         invoice.status = PAID;
         invoice.paymentTime = (block.timestamp).toUint32();
-        invoice.holdPeriod = (defaultHoldPeriod + block.timestamp).toUint32();
         invoiceData[_invoiceId] = invoice;
 
         emit InvoicePaid(_invoiceId, msg.sender, msg.value, block.timestamp);
@@ -153,7 +152,8 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     /// inheritdoc IPaymentProcessor
     function refundPayerAfterWindow(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
-        if (invoice.status != PAID || block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
+        uint256 holdPeriod = invoice.holdPeriod == 0 ? defaultHoldPeriod : invoice.holdPeriod;
+        if (invoice.status != PAID || block.timestamp < invoice.paymentTime + holdPeriod) {
             revert InvoiceNotEligibleForRefund();
         }
         invoiceData[_invoiceId].status = REFUNDED;
@@ -169,6 +169,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
      */
     function _acceptInvoice(uint256 _invoiceId) internal {
         invoiceData[_invoiceId].status = ACCEPTED;
+        invoiceData[_invoiceId].holdPeriod = (defaultHoldPeriod + block.timestamp).toUint32();
         emit InvoiceAccepted(_invoiceId, block.timestamp);
     }
 
