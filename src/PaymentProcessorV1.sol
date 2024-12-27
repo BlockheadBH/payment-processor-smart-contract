@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 import { Ownable } from "solady/auth/Ownable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-
 import { IEscrow, Escrow } from "./Escrow.sol";
 import { Invoice, IPaymentProcessorV1 } from "./interface/IPaymentProcessorV1.sol";
-
 import {
     CREATED,
     ACCEPTED,
@@ -65,16 +63,17 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     }
 
     /// inheritdoc IPaymentProcessor
-
     function makeInvoicePayment(uint256 _invoiceId) external payable returns (address) {
         Invoice memory invoice = invoiceData[_invoiceId];
         uint256 bhFee = fee;
 
         if (invoice.status != CREATED) {
-            revert InvalidInvoiceState();
+            revert InvalidInvoiceState(invoice.status);
         }
 
-        if (invoice.creator == msg.sender) revert CreatorCannotPayOwnedInvoice();
+        if (invoice.creator == msg.sender) {
+            revert CreatorCannotPayOwnedInvoice();
+        }
 
         if (msg.value > invoice.price) {
             revert ExcessivePayment();
@@ -206,7 +205,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
             revert Unauthorized();
         }
         uint256 balance = address(this).balance;
-        (bool success,) = payable(feeReceiver).call{ value: balance }("");
+        (bool success,) = feeReceiver.call{ value: balance }("");
         if (!success) {
             revert TransferFailed();
         }

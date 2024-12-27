@@ -158,8 +158,13 @@ contract PaymentProcessorTest is Test {
         vm.warp(block.timestamp - VALID_PERIOD);
         address escrowAddress = pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
 
+        uint256 currentInvoiceStatus = pp.getInvoiceData(invoiceId).status;
         // TRY ALREADY PAID INVOICE
-        vm.expectRevert(IPaymentProcessorV1.InvalidInvoiceState.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPaymentProcessorV1.InvalidInvoiceState.selector, currentInvoiceStatus
+            )
+        );
         pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
         vm.stopPrank();
 

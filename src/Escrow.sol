@@ -6,9 +6,6 @@ import { IEscrow } from "./interface/IEscrow.sol";
 // balance === address(this).balance
 
 contract Escrow is IEscrow {
-    /// @notice The initial value deposited into the contract.
-    uint256 public balance;
-
     /// @notice The address of the payer associated with this escrow.
     address public immutable payer;
 
@@ -42,7 +39,6 @@ contract Escrow is IEscrow {
         creator = _creator;
         payer = _payer;
         paymentProcessor = _paymentProcessor;
-        balance += msg.value;
         emit FundsDeposited(_invoiceId, msg.value);
     }
 
@@ -66,9 +62,8 @@ contract Escrow is IEscrow {
      * @return The amount of funds (in wei) that was transferred.
      */
     function _withdraw(address _to) internal returns (uint256) {
-        uint256 bal = balance;
-        balance = 0;
-        (bool success,) = _to.call{ value: address(this).balance }("");
+        uint256 bal = address(this).balance;
+        (bool success,) = _to.call{ value: bal }("");
         if (!success) {
             revert TransferFailed();
         }

@@ -33,7 +33,8 @@ interface IPaymentProcessorV1 {
     error InvoicePriceIsTooLow();
 
     /// @notice Thrown when the invoice is in an invalid state for the requested action.
-    error InvalidInvoiceState();
+    /// @param invoiceState The current state of the invoice, which caused the operation to fail
+    error InvalidInvoiceState(uint256 invoiceState);
 
     /// @notice Thrown when the invoice is no longer valid (e.g., cancelled or expired).
     error InvoiceIsNoLongerValid();
