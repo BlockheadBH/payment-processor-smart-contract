@@ -117,8 +117,14 @@ contract PaymentProcessorTest is Test {
         vm.prank(payerOne);
         pp.makeInvoicePayment{ value: invoicePrice }(invoiceId);
 
+        uint256 currentInvoiceStatus = pp.getInvoiceData(invoiceId).status;
+
         vm.startPrank(creatorOne);
-        vm.expectRevert(IPaymentProcessorV1.InvoiceAlreadyPaid.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPaymentProcessorV1.InvalidInvoiceState.selector, currentInvoiceStatus
+            )
+        );
         pp.cancelInvoice(invoiceId);
 
         uint256 newInvoiceId = pp.createInvoice(invoicePrice);

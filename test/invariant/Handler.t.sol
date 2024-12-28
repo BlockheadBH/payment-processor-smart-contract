@@ -51,7 +51,7 @@ contract Handler is Test {
     function cancelInvoice(uint256 _invoiceId) public countCall("cancelInvoice") {
         if (ids.length > 0) {
             _invoiceId = ids[bound(_invoiceId, 0, ids.length - 1)];
-            if (pp.getInvoiceData(_invoiceId).status >= PAID) return;
+            if (pp.getInvoiceData(_invoiceId).status != CREATED) return;
             vm.prank(creator);
             pp.cancelInvoice(_invoiceId);
         }
@@ -60,7 +60,7 @@ contract Handler is Test {
     function makePayment(uint256 _invoiceId, uint256 _value) public countCall("makePayment") {
         if (ids.length > 0) {
             _invoiceId = ids[bound(_invoiceId, 0, ids.length - 1)];
-            if (pp.getInvoiceData(_invoiceId).status >= ACCEPTED) return;
+            if (pp.getInvoiceData(_invoiceId).status != CREATED) return;
             _value = bound(_value, FEE + 1, price[_invoiceId]);
 
             vm.prank(payer);

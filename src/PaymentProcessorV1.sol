@@ -124,8 +124,8 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
         if (invoice.creator != msg.sender) {
             revert Unauthorized();
         }
-        if (invoice.status == PAID) {
-            revert InvoiceAlreadyPaid();
+        if (invoice.status != CREATED) {
+            revert InvalidInvoiceState(invoice.status);
         }
         invoiceData[_invoiceId].status = CANCELLED;
         emit InvoiceCanceled(_invoiceId);
