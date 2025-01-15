@@ -171,7 +171,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     function _acceptInvoice(uint256 _invoiceId) internal {
         invoiceData[_invoiceId].status = ACCEPTED;
         invoiceData[_invoiceId].holdPeriod = (defaultHoldPeriod + block.timestamp).toUint32();
-        emit InvoiceAccepted(_invoiceId, block.timestamp);
+        emit InvoiceAccepted(_invoiceId);
     }
 
     /**

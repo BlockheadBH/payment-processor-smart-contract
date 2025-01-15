@@ -191,11 +191,7 @@ interface IPaymentProcessorV1 {
      * @param invoiceId The unique ID of the accepted invoice.
      * @param amountPaid The amount paid towards the invoice in wei.
      */
-    event InvoicePaid(
-        uint256 indexed invoiceId,
-        address indexed payer,
-        uint256 indexed amountPaid
-    );
+    event InvoicePaid(uint256 indexed invoiceId, address indexed payer, uint256 indexed amountPaid);
 
     /**
      * @notice Emitted when an invoice is rejected by the creator.
@@ -212,9 +208,8 @@ interface IPaymentProcessorV1 {
     /**
      * @notice Emitted when an invoice is accepted by the creator.
      * @param invoiceId The unique ID of the accepted invoice.
-     * @param acceptedAt The timestamp which the invoice was accepted
      */
-    event InvoiceAccepted(uint256 indexed invoiceId, uint256 indexed acceptedAt);
+    event InvoiceAccepted(uint256 indexed invoiceId);
 
     /**
      * @notice Emitted when an invoice is canceled.
