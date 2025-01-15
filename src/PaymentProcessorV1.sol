@@ -51,13 +51,13 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
         uint256 thisInvoiceId = currentInvoiceId;
         Invoice memory invoice = invoiceData[thisInvoiceId];
         invoice.creator = msg.sender;
-        invoice.creationTime = (block.timestamp).toUint32();
+        invoice.createdAt = (block.timestamp).toUint32();
         invoice.price = _invoicePrice;
         invoice.status = CREATED;
         invoiceData[thisInvoiceId] = invoice;
         currentInvoiceId++;
 
-        emit InvoiceCreated(thisInvoiceId, msg.sender, block.timestamp, _invoicePrice);
+        emit InvoiceCreated(thisInvoiceId, msg.sender, _invoicePrice);
 
         return thisInvoiceId;
     }
@@ -79,7 +79,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
             revert ExcessivePayment();
         }
 
-        if (block.timestamp > invoice.creationTime + VALID_PERIOD) {
+        if (block.timestamp > invoice.createdAt + VALID_PERIOD) {
             revert InvoiceIsNoLongerValid();
         }
 
@@ -87,19 +87,20 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
             revert ValueIsTooLow();
         }
 
+        uint256 amountPaid = msg.value - bhFee;
+
         address escrow = address(
-            new Escrow{ value: msg.value - bhFee }(
-                _invoiceId, invoice.creator, msg.sender, address(this)
-            )
+            new Escrow{ value: amountPaid }(_invoiceId, invoice.creator, msg.sender, address(this))
         );
 
         invoice.escrow = escrow;
         invoice.payer = msg.sender;
         invoice.status = PAID;
+        invoice.amountPaid = amountPaid;
         invoice.paymentTime = (block.timestamp).toUint32();
         invoiceData[_invoiceId] = invoice;
 
-        emit InvoicePaid(_invoiceId, msg.sender, msg.value, block.timestamp);
+        emit InvoicePaid(_invoiceId, msg.sender, msg.value);
         return escrow;
     }
 
@@ -140,7 +141,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
         if (invoice.creator != msg.sender) {
             revert Unauthorized();
         }
-        if (block.timestamp < invoice.paymentTime + invoice.holdPeriod) {
+        if (block.timestamp < invoice.holdPeriod) {
             revert HoldPeriodHasNotBeenExceeded();
         }
 
@@ -194,6 +195,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
         if (invoice.status < CREATED) {
             revert InvoiceDoesNotExist();
         }
+
         if (_holdPeriod < invoice.holdPeriod) {
             revert HoldPeriodShouldBeGreaterThanDefault();
         }
@@ -242,7 +244,13 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
 
     /// inheritdoc IPaymentProcessor
     function getCurrentInvoiceId() external view returns (uint256) {
+        // change total invoice created
         return currentInvoiceId;
+    }
+
+    /// inheritdoc IPaymentProcessor
+    function totalInvoiceCreated() external view returns (uint256) {
+        return currentInvoiceId - 1;
     }
 
     /// inheritdoc IPaymentProcessor

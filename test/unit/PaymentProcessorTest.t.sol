@@ -82,10 +82,10 @@ contract PaymentProcessorTest is Test {
 
         Invoice memory invoiceDataOne = pp.getInvoiceData(1);
         assertEq(invoiceDataOne.creator, creatorOne);
-        assertEq(invoiceDataOne.creationTime, block.timestamp);
+        assertEq(invoiceDataOne.createdAt, block.timestamp);
         assertEq(invoiceDataOne.paymentTime, 0);
         assertEq(invoiceDataOne.price, 100 ether);
-        assertEq(invoiceDataOne.amountPayed, 0);
+        assertEq(invoiceDataOne.amountPaid, 0);
         assertEq(invoiceDataOne.payer, address(0));
         assertEq(invoiceDataOne.status, CREATED);
         assertEq(invoiceDataOne.escrow, address(0));
@@ -96,10 +96,10 @@ contract PaymentProcessorTest is Test {
 
         Invoice memory invoiceDataTwo = pp.getInvoiceData(2);
         assertEq(invoiceDataTwo.creator, creatorTwo);
-        assertEq(invoiceDataTwo.creationTime, block.timestamp);
+        assertEq(invoiceDataTwo.createdAt, block.timestamp);
         assertEq(invoiceDataTwo.paymentTime, 0);
         assertEq(invoiceDataTwo.price, 25 ether);
-        assertEq(invoiceDataTwo.amountPayed, 0);
+        assertEq(invoiceDataTwo.amountPaid, 0);
         assertEq(invoiceDataTwo.payer, address(0));
         assertEq(invoiceDataTwo.status, CREATED);
         assertEq(invoiceDataTwo.escrow, address(0));

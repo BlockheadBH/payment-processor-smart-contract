@@ -160,6 +160,12 @@ interface IPaymentProcessorV1 {
     function getDefaultHoldPeriod() external view returns (uint256);
 
     /**
+     * @notice Returns the total number of invoices created.
+     * @return The total count of invoices created as a `uint256` value.
+     */
+    function totalInvoiceCreated() external view returns (uint256);
+
+    /**
      * @notice Retrieves detailed data for a specific invoice.
      * @param _invoiceId The ID of the invoice.
      * @return A struct containing the invoice's details.
@@ -177,22 +183,18 @@ interface IPaymentProcessorV1 {
      * @param creator The address of the invoice creator.
      * @param invoiceId The unique ID of the created invoice.
      * @param price The price of the invoice that was created.
-     * @param createdAt The timestamp when the invoice was created.
      */
-    event InvoiceCreated(
-        uint256 indexed invoiceId, address indexed creator, uint256 price, uint256 indexed createdAt
-    );
+    event InvoiceCreated(uint256 indexed invoiceId, address indexed creator, uint256 indexed price);
 
     /**
      * @notice Emitted when an invoice payment is made.
      * @param invoiceId The unique ID of the accepted invoice.
-     * @param amountPayed The amount paid towards the invoice in wei.
+     * @param amountPaid The amount paid towards the invoice in wei.
      */
     event InvoicePaid(
         uint256 indexed invoiceId,
         address indexed payer,
-        uint256 indexed amountPayed,
-        uint256 payedAt
+        uint256 indexed amountPaid
     );
 
     /**

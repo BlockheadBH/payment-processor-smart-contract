@@ -42,10 +42,10 @@ contract PaymentProcessorTest is Test {
         pp.createInvoice(_amount);
         Invoice memory invoiceData = pp.getInvoiceData(1);
         assertEq(invoiceData.creator, creator);
-        assertEq(invoiceData.creationTime, block.timestamp);
+        assertEq(invoiceData.createdAt, block.timestamp);
         assertEq(invoiceData.paymentTime, 0);
         assertEq(invoiceData.price, _amount);
-        assertEq(invoiceData.amountPayed, 0);
+        assertEq(invoiceData.amountPaid, 0);
         assertEq(invoiceData.payer, address(0));
         assertEq(invoiceData.status, CREATED);
         assertEq(invoiceData.escrow, address(0));

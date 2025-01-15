@@ -12,9 +12,9 @@ struct Invoice {
     /// @notice The total price of the invoice in wei.
     uint256 price;
     /// @notice The amount that has been paid.
-    uint256 amountPayed;
+    uint256 amountPaid;
     /// @notice The Unix timestamp when the invoice was created.
-    uint32 creationTime;
+    uint32 createdAt;
     /// @notice The Unix timestamp when the payment was completed.
     uint32 paymentTime;
     /// @notice The hold period for the funds in escrow.
