@@ -222,4 +222,6 @@ interface IPaymentProcessorV1 {
      * @param invoiceId The unique ID of the released invoice.
      */
     event InvoiceReleased(uint256 indexed invoiceId);
+
+    event UpdateHoldPeriod(uint256 indexed invoiceId, uint256 indexed holdPeriod);
 }

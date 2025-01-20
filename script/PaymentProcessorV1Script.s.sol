@@ -5,7 +5,7 @@ import { Script } from "forge-std/Script.sol";
 import { PaymentProcessorV1 } from "../src/PaymentProcessorV1.sol";
 
 contract PaymentProcessorV1Script is Script {
-    uint256 constant FEE = 1 ether;
+    uint256 constant FEE = 0.1 ether;
     uint256 constant DEFAULT_HOLD_PERIOD = 24 hours;
 
     function run() external returns (address) {

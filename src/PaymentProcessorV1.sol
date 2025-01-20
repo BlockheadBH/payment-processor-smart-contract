@@ -133,7 +133,6 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     }
 
     /// inheritdoc IPaymentProcessor
-
     function releaseInvoice(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
 
@@ -192,14 +191,17 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     function setInvoiceHoldPeriod(uint256 _invoiceId, uint32 _holdPeriod) external onlyOwner {
         Invoice memory invoice = invoiceData[_invoiceId];
 
+        uint32 holdPeriod = (_holdPeriod + block.timestamp).toUint32();
+
         if (invoice.status < CREATED) {
             revert InvoiceDoesNotExist();
         }
 
-        if (_holdPeriod < invoice.holdPeriod) {
+        if (holdPeriod < invoice.holdPeriod) {
             revert HoldPeriodShouldBeGreaterThanDefault();
         }
-        invoiceData[_invoiceId].holdPeriod = _holdPeriod;
+        invoiceData[_invoiceId].holdPeriod = holdPeriod;
+        emit UpdateHoldPeriod(_invoiceId, holdPeriod);
     }
 
     /// inheritdoc IPaymentProcessor
