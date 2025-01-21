@@ -31,4 +31,5 @@ forge test
 
 ## Contract Address
 
-- Testnet: 0x31CA89Eea4DdE88F8B044106117994a7fABB46b6
+- Testnet: 0x74BEeeEeE0CdaE7C2f46e56a6760cdceb915b6de
+
