@@ -152,10 +152,10 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     /// inheritdoc IPaymentProcessor
     function refundPayerAfterWindow(uint256 _invoiceId) external {
         Invoice memory invoice = invoiceData[_invoiceId];
-        uint256 holdPeriod = invoice.holdPeriod == 0 ? defaultHoldPeriod : invoice.holdPeriod;
-        if (invoice.status != PAID || block.timestamp < invoice.paymentTime + holdPeriod) {
+        if (invoice.status != PAID || block.timestamp < invoice.paymentTime + ACCEPTANCE_WINDOW) {
             revert InvoiceNotEligibleForRefund();
         }
+
         invoiceData[_invoiceId].status = REFUNDED;
         IEscrow(invoice.escrow).refundToPayer(invoice.payer);
         emit InvoiceRefunded(_invoiceId);
