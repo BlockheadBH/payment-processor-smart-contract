@@ -151,7 +151,7 @@ interface IPaymentProcessorV1 {
      * @notice Gets the current invoice ID counter.
      * @return The current invoice ID.
      */
-    function getCurrentInvoiceId() external view returns (uint256);
+    function getNextInvoiceId() external view returns (uint256);
 
     /**
      * @notice Gets the default hold period for invoices.
@@ -223,5 +223,10 @@ interface IPaymentProcessorV1 {
      */
     event InvoiceReleased(uint256 indexed invoiceId);
 
-    event UpdateHoldPeriod(uint256 indexed invoiceId, uint256 indexed holdPeriod);
+    /**
+     * @notice Emitted when the hold period of a given invoice is updated to a new timestamp.
+     * @param invoiceId The ID of the invoice whose hold period was updated.
+     * @param releaseDueTimestamp The new hold period expressed as a UNIX timestamp.
+     */
+    event UpdateHoldPeriod(uint256 indexed invoiceId, uint256 indexed releaseDueTimestamp);
 }

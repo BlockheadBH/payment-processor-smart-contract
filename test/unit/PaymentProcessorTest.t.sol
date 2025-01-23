@@ -53,7 +53,7 @@ contract PaymentProcessorTest is Test {
     function test_storage_state() public view {
         assertEq(pp.getFee(), FEE);
         assertEq(pp.getFeeReceiver(), feeReceiver);
-        assertEq(pp.getCurrentInvoiceId(), 1);
+        assertEq(pp.getNextInvoiceId(), 1);
         assertEq(pp.getDefaultHoldPeriod(), DEFAULT_HOLD_PERIOD);
     }
 
@@ -89,7 +89,7 @@ contract PaymentProcessorTest is Test {
         assertEq(invoiceDataOne.payer, address(0));
         assertEq(invoiceDataOne.status, CREATED);
         assertEq(invoiceDataOne.escrow, address(0));
-        assertEq(pp.getCurrentInvoiceId(), 2);
+        assertEq(pp.getNextInvoiceId(), 2);
 
         vm.prank(creatorTwo);
         pp.createInvoice(25 ether);
@@ -103,7 +103,7 @@ contract PaymentProcessorTest is Test {
         assertEq(invoiceDataTwo.payer, address(0));
         assertEq(invoiceDataTwo.status, CREATED);
         assertEq(invoiceDataTwo.escrow, address(0));
-        assertEq(pp.getCurrentInvoiceId(), 3);
+        assertEq(pp.getNextInvoiceId(), 3);
     }
 
     function test_cancel_invoice() public {

@@ -51,7 +51,7 @@ contract Invariant is StdInvariant, Test {
     }
 
     function invariant_currentIdIsValid() public view {
-        assertEq(handler.totalInvoiceCreated(), pp.getCurrentInvoiceId());
+        assertEq(handler.totalInvoiceCreated(), pp.getNextInvoiceId());
     }
 
     function invariant_feeBalance() public view {

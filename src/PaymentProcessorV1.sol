@@ -137,6 +137,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
         Invoice memory invoice = invoiceData[_invoiceId];
 
         if (invoice.status == RELEASED) revert InvoiceHasAlreadyBeenReleased();
+        if (invoice.status != ACCEPTED) revert InvalidInvoiceState(invoice.status);
         if (invoice.creator != msg.sender) {
             revert Unauthorized();
         }
@@ -168,8 +169,11 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
      * @param _invoiceId The ID of the invoice being accepted.
      */
     function _acceptInvoice(uint256 _invoiceId) internal {
-        invoiceData[_invoiceId].status = ACCEPTED;
-        invoiceData[_invoiceId].holdPeriod = (defaultHoldPeriod + block.timestamp).toUint32();
+        Invoice memory invoice = invoiceData[_invoiceId];
+        invoice.status = ACCEPTED;
+        uint256 holdPeriod = invoice.holdPeriod == 0 ? defaultHoldPeriod : invoice.holdPeriod;
+        invoice.holdPeriod = (holdPeriod + block.timestamp).toUint32();
+        invoiceData[_invoiceId] = invoice;
         emit InvoiceAccepted(_invoiceId);
     }
 
@@ -245,7 +249,7 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     }
 
     /// inheritdoc IPaymentProcessor
-    function getCurrentInvoiceId() external view returns (uint256) {
+    function getNextInvoiceId() external view returns (uint256) {
         // change total invoice created
         return currentInvoiceId;
     }

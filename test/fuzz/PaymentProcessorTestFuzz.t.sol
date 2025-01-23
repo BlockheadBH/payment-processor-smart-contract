@@ -49,7 +49,7 @@ contract PaymentProcessorTest is Test {
         assertEq(invoiceData.payer, address(0));
         assertEq(invoiceData.status, CREATED);
         assertEq(invoiceData.escrow, address(0));
-        assertEq(pp.getCurrentInvoiceId(), 2);
+        assertEq(pp.getNextInvoiceId(), 2);
     }
 
     function testFuzz_makeInvoicePayment(uint256 _paymentAmount) public {

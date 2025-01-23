@@ -3,8 +3,6 @@ pragma solidity 0.8.28;
 
 import { IEscrow } from "./interface/IEscrow.sol";
 
-// balance === address(this).balance
-
 contract Escrow is IEscrow {
     /// @notice The address of the payer associated with this escrow.
     address public immutable payer;
