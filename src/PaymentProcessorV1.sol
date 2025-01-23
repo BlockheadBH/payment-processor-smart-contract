@@ -32,6 +32,12 @@ contract PaymentProcessorV1 is Ownable, IPaymentProcessorV1 {
     /// @notice The default hold period for funds in escrow, measured in seconds.
     uint256 private defaultHoldPeriod;
 
+    /**
+     * @notice Stores the `Invoice` structs, keyed by a unique invoice ID.
+     * @dev The key is an unsigned integer representing the invoice ID, and the value
+     *      is an `Invoice` struct that contains detailed information such as the
+     *      creator, payer, status, amount, escrow address, timestamps, etc.
+     */
     mapping(uint256 invoiceId => Invoice invoice) private invoiceData;
 
     constructor(address _receiversAddress, uint256 _fee, uint256 _defaultHoldPeriod) {
